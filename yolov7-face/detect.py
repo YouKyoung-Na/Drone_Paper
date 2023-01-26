@@ -1,3 +1,4 @@
+#yolov7-face
 import argparse
 import time
 from pathlib import Path
@@ -103,6 +104,7 @@ def detect(opt):
             txt_path = str(save_dir / 'labels' / p.stem) + ('' if dataset.mode == 'image' else f'_{frame}')  # img.txt
             s += '%gx%g ' % img.shape[2:]  # print string
             gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
+
             if len(det):
                 # Rescale boxes from img_size to im0 size
                 scale_coords(img.shape[2:], det[:, :4], im0.shape, kpt_label=False)
@@ -116,7 +118,8 @@ def detect(opt):
                 # Write results
                 for det_index, (*xyxy, conf, cls) in enumerate(reversed(det[:,:6])):
                     
-                    #### yk
+                    ################### yk ##################################
+
                     xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4))).view(-1).tolist()  # normalized xywh
                     
                     # print(f'\n\n blur_img = {blur_img} \n\n')
@@ -133,7 +136,7 @@ def detect(opt):
                         im0 = original_img
 
                         
-                    #### yk
+                    ##################### yk #####################################
 
                     if save_txt:  # Write to file
                         # print(f'\n\n xyxy = {xyxy}\n\n')
@@ -226,13 +229,12 @@ if __name__ == '__main__':
     parser.add_argument('--hide-conf', default=False, action='store_true', help='hide confidences')
     parser.add_argument('--kpt-label', type=int, default=5, help='number of keypoints')
 
-
-
-    ####
+    ####yk####
 
     parser.add_argument('--blur', default=True, action='store_true', help='hide confidences')
 
-    ####
+    ##########
+
     opt = parser.parse_args()
     print(opt)
     check_requirements(exclude=('tensorboard', 'pycocotools', 'thop'))
