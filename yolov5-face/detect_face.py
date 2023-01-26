@@ -27,23 +27,6 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))  # add ROOT to PATH
 ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
-######yk#################################
-'''yolov7-face utils/general.py에서 가져옴..'''
-
-import math
-
-# def make_divisible(x, divisor):
-#     # Returns x evenly divisible by divisor
-#     return math.ceil(x / divisor) * divisor
-
-# def check_img_size(img_size, s=32):
-#     # Verify img_size is a multiple of stride s
-#     new_size = make_divisible(img_size, int(s))  # ceil gs-multiple
-#     if new_size != img_size:
-#         print('WARNING: --img-size %g must be multiple of max stride %g, updating to %g' % (img_size, s, new_size))
-#     return new_size
-#########################################
-
 def load_model(weights, device):
     model = attempt_load(weights, map_location=device)  # load FP32 model
     return model
@@ -100,18 +83,7 @@ def show_results(img, xyxy, conf, landmarks, class_num):
 
 def detect(model, source, device, project, name, exist_ok, save_img, view_img):
     # Load model
-    '''yolov7-face 코드 긁어옴'''
-    # if isinstance(imgsz, (list,tuple)):
-    #     assert len(imgsz) ==2; "height and width of image has to be specified"
-    #     imgsz[0] = check_img_size(imgsz[0], s=stride)
-    #     imgsz[1] = check_img_size(imgsz[1], s=stride)
-    # else:
-    #     imgsz = check_img_size(imgsz, s=stride)  # check img_size
-    # names = model.module.names if hasattr(model, 'module') else model.names  # get class names
-    # # if half:
-    # #     model.half()  # to FP16
 
-    '''yolov5-face 원본코드'''
     img_size = 640
     conf_thres = 0.6
     iou_thres = 0.5
@@ -181,9 +153,7 @@ def detect(model, source, device, project, name, exist_ok, save_img, view_img):
 
             ##### yk #########
             blur_img = im0
-            
             ##################
-            
 
             p = Path(p)  # to Path
             save_path = str(Path(save_dir) / p.name)  # im.jpg
@@ -205,12 +175,23 @@ def detect(model, source, device, project, name, exist_ok, save_img, view_img):
                     landmarks = det[j, 5:15].view(-1).tolist()
                     class_num = det[j, 15].cpu().numpy()
 
-                    ##################yk##################
-                    print(f'\n xyxy = {xyxy}\n')
 
-                    #####################################
                     
                     im0 = show_results(im0, xyxy, conf, landmarks, class_num)
+
+                    ##################yk##################
+                    # print(f'\n xyxy = {xyxy}\n')
+
+                    if opt.blur: 
+                        mosaic_loc= blur_img[int(xyxy[1]):int(xyxy[3]), int(xyxy[0]):int(xyxy[2])]
+                        mosaic_loc = cv2.blur(mosaic_loc, (50,50))
+
+                        original_img = blur_img
+                        original_img[int(xyxy[1]):int(xyxy[3]), int(xyxy[0]):int(xyxy[2])] = mosaic_loc
+
+                        im0 = original_img
+
+                    #####################################
             
             if view_img:
                 cv2.imshow('result', im0)
@@ -246,12 +227,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     #####수정#####
-    parser.add_argument('--weights', nargs='+', type=str, default='yolov5s.pt', help='model.pt path(s)')
-    parser.add_argument('--source', type=str, default='./data/images/test.jpg', help='source')  # file/folder, 0 for webcam
+    parser.add_argument('--weights', nargs='+', type=str, default='yolov5s-face.pt', help='model.pt path(s)')
+    parser.add_argument('--source', type=str, default='./data/images/our.jpg', help='source')  # file/folder, 0 for webcam
 
-    parser.add_argument('--img-size',nargs= '+',type=int, default=640, help='inference size (pixels)')
-    # parser.add_argument('--img-size',type=int, default=640, help='inference size (pixels)')
+    # parser.add_argument('--img-size',nargs= '+',type=int, default=640, help='inference size (pixels)')
+    parser.add_argument('--img-size',type=int, default=640, help='inference size (pixels)')
     parser.add_argument('--classes', nargs='+', type=int, help='filter by class: --class 0, or --class 0 2 3')
+
+    #blur 추가
+    parser.add_argument('--blur', default=True, action='store_true', help='hide confidences')
 
     ##############
 
@@ -259,7 +243,7 @@ if __name__ == '__main__':
     parser.add_argument('--name', default='exp', help='save results to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     parser.add_argument('--save-img', action='store_true', default=True,  help='save results')
-    parser.add_argument('--view-img', action='store_true', help='show results')
+    parser.add_argument('--view-img', default = True, action='store_true', help='show results')
     opt = parser.parse_args()
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
