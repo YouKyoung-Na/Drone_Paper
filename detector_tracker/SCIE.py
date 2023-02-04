@@ -28,11 +28,11 @@ from utils.torch_utils import select_device, smart_inference_mode
 
 ###### FOR TRACKING ######
 from trackers.multi_tracker_zoo import create_tracker
-
 ###### FOR TRACKING ######
 
 
-### setting module
+
+# setting module
 # For plus module
 from datetime import datetime
 import natsort
@@ -115,14 +115,12 @@ def run(
     # Directories
     save_dir = increment_path(Path(project) / name, exist_ok=exist_ok)  # increment run
     
-    
-    
+
     ###### FOR TRACKING ######
     save_track_dir = increment_path(Path(tracking_result) / name, exist_ok=exist_ok)  # increment run
     ###### FOR TRACKING ######
     
-    
-    
+
     (save_dir / 'labels').mkdir(parents=True, exist_ok=True)
     (save_dir / 'images').mkdir(parents=True, exist_ok=True)
     
@@ -140,6 +138,7 @@ def run(
     ###### FOR TRACKING ######
     nr_sources = 1
     ###### FOR TRACKING ######
+    
     bs = 1  # batch_size
     if webcam:
         view_img = check_imshow(warn=True)
@@ -312,23 +311,15 @@ def run(
             else:
                 pass
                 #tracker_list[i].tracker.pred_n_update_all_tracks()
-                ###### FOR TRACKING ######
+            ############# FOR TRACKING #############
                 
-                
-                
-                
-                
-                
-                
-            
+
 
                 # Print results
                 for c in det[:, 5].unique():
                     n = (det[:, 5] == c).sum()  # detections per class
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
-
-                
 
                 # Write results
                 for *xyxy, conf, cls in reversed(det):
@@ -401,12 +392,16 @@ def run(
         strip_optimizer(weights[0])  # update model (to fix SourceChangeWarning)
 
 
+
+
+
+
 def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'best.pt', help='model path or triton URL')
     parser.add_argument('--source', type=str, default=ROOT / 'data/images', help='file/dir/URL/glob/screen/0(webcam)')
     parser.add_argument('--data', type=str, default=ROOT / 'data/onlydrone.yaml', help='(optional) dataset.yaml path')
-    parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[640], help='inference size h,w')
+    # parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[640], help='inference size h,w')
     parser.add_argument('--conf-thres', type=float, default=0.8, help='confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='NMS IoU threshold')
     parser.add_argument('--max-det', type=int, default=1000, help='maximum detections per image')
@@ -441,7 +436,8 @@ def parse_opt():
     
     ###### FOR TRACKING ######
     
-    
+
+
     opt = parser.parse_args()
     opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
     print_args(vars(opt))
@@ -456,4 +452,3 @@ def main(opt):
 if __name__ == "__main__":
     opt = parse_opt()
     main(opt)
-
