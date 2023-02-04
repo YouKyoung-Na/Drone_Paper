@@ -28,7 +28,7 @@ cd Drone_Paper
 conda install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia
 cd detector_tracker
 pip install -r requirements.txt
-pip install natsoft
+pip install natsort
 conda install -c conda-forge lap
 ```
 conda install -c conda-forge lap
