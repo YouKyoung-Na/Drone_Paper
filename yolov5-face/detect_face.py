@@ -152,7 +152,8 @@ def detect(model, source, device, project, name, exist_ok, save_img, view_img):
 
 
             ##### yk #########
-            blur_img = im0
+            # blur_img 변수 생성, im0과 동일시
+            blur_img = im0  
             ##################
 
             p = Path(p)  # to Path
@@ -182,10 +183,16 @@ def detect(model, source, device, project, name, exist_ok, save_img, view_img):
                     ##################yk##################
                     # print(f'\n xyxy = {xyxy}\n')
 
-                    if opt.blur: 
-                        mosaic_loc= blur_img[int(xyxy[1]):int(xyxy[3]), int(xyxy[0]):int(xyxy[2])]
-                        mosaic_loc = cv2.blur(mosaic_loc, (50,50))
 
+                    # blur option이 True일 때 실행
+                    if opt.blur: 
+                        # mosaic loc 변수 생성, mosaic loc= xyxy 1~3 index(y좌표), xyxy 0~2 index(x좌표)부분
+                        # mosaic loc 부분 blur = mosaic_loc
+                        mosaic_loc = blur_img[int(xyxy[1]):int(xyxy[3]), int(xyxy[0]):int(xyxy[2])]  
+                        mosaic_loc = cv2.blur(mosaic_loc, (50,50))
+                        
+                        # blur가 안된 blur_img를 새 변수 original_img와 동일시 
+                        # 원본 + blur 처리된 loc => 최종 이미지
                         original_img = blur_img
                         original_img[int(xyxy[1]):int(xyxy[3]), int(xyxy[0]):int(xyxy[2])] = mosaic_loc
 
@@ -226,18 +233,15 @@ def detect(model, source, device, project, name, exist_ok, save_img, view_img):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    #####수정#####
     parser.add_argument('--weights', nargs='+', type=str, default='yolov5s-face.pt', help='model.pt path(s)')
     parser.add_argument('--source', type=str, default='./data/images/our.jpg', help='source')  # file/folder, 0 for webcam
-
-    # parser.add_argument('--img-size',nargs= '+',type=int, default=640, help='inference size (pixels)')
+    # parser.add_argument('--img-size',nargs= '+',type=int, default=640, help='inference size (pixels)')    #img size 값 조정 option 없앰
     parser.add_argument('--img-size',type=int, default=640, help='inference size (pixels)')
     parser.add_argument('--classes', nargs='+', type=int, help='filter by class: --class 0, or --class 0 2 3')
 
-    #blur 추가
+    #####blur option 추가#####
     parser.add_argument('--blur', default=True, action='store_true', help='hide confidences')
-
-    ##############
+    #####blur option 추가#####
 
     parser.add_argument('--project', default=ROOT / 'runs/detect', help='save results to project/name')
     parser.add_argument('--name', default='exp', help='save results to project/name')
