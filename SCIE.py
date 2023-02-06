@@ -22,7 +22,7 @@ sys.path.append('.\\yolov5_face')
 
 print(sys.path)
 
-face_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+face_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(face_device)
 
 
@@ -38,13 +38,6 @@ from trackers.multi_tracker_zoo import create_tracker
 
 ###### FOR TRACKING ######
 
-###### For Face Blur ######
-from yolov5_face.detect_face import load_model, scale_coords_landmarks, show_results
-from utilss.datasets import letterbox
-from utilss.general import non_max_suppression_face, scale_coords
-
-face_model = load_model(ROOT / './yolov5_face/yolov5s-face.pt', "cuda")
-###### For Face Blur ######
 
 ### setting module
 # For plus module
@@ -107,11 +100,6 @@ def run(
         dnn=False,  # use OpenCV DNN for ONNX inference
         vid_stride=1,  # video frame-rate stride
         
-        ###### For Face Bluring #####
-        face_weights=ROOT / 'yolov5_face/yolov5s-face.pt',
-        blur = True, 
-        bluring_result=ROOT /'runs/face_blur',  # save results to project/name
-        ###### For Face Bluring #####
         
         ###### FOR TRACKING ######
         reid_weights=ROOT / 'osnet_x0_25_msmt17.pt',
@@ -120,8 +108,6 @@ def run(
         tracking_result=ROOT /'runs/track',  # save results to project/name
         hide_class=False,
         save_MOT_label=True,
-        
-        ids = []
         ###### FOR TRACKING ######
 
 
@@ -143,9 +129,6 @@ def run(
     save_track_dir = increment_path(Path(tracking_result) / name, exist_ok=exist_ok)  # increment run
     ###### FOR TRACKING ######
 
-    ###### For Face Bluring ######
-    save_bluring_dir = increment_path(Path(bluring_result) / name, exist_ok=exist_ok)  # increment run
-    ###### For Face Bluring ######
     
     (save_dir / 'labels').mkdir(parents=True, exist_ok=True)
     (save_dir / 'images').mkdir(parents=True, exist_ok=True)
@@ -211,8 +194,8 @@ def run(
     ###### FOR TRACKING ######
     curr_frames, prev_frames = [None] * nr_sources, [None] * nr_sources
     ###### FOR TRACKING ######
-    for frame_idx, (path, im, im0s, vid_cap, s) in enumerate(dataset): # face_dataset = [path, im, im0s, vid_cap]
-
+    for frame_idx, (path, im, im0s, vid_cap, s) in enumerate(dataset): # 데이터셋 목록에서 하나씩 이미지랑 속성 받아옴(Frame당 한번씩 반복)
+        
         with dt[0]:
             im = torch.from_numpy(im).to(model.device)
             im = im.half() if model.fp16 else im.float()  # uint8 to fp16/32
@@ -227,7 +210,7 @@ def run(
 
         # NMS
         with dt[2]:
-            pred = non_max_suppression(pred, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)
+            pred = non_max_suppression(pred, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det) # Detrction 결과가 pred에 할당 
 
         # Second-stage classifier (optional)
         # pred = utils.general.apply_classifier(pred, classifier_model, im, im0s)
@@ -263,7 +246,7 @@ def run(
                 ###### FOR TRACKING ######
                 
             p = Path(p)  # to Path
-            print(f'\n p = {p}\n')
+ 
 			# Store information about the current time
             now = datetime.now()
             now = str(now).replace(" ", "_")
@@ -299,117 +282,6 @@ def run(
             ###### FOR TRACKING ######
             
             
-            ###### FOR FACE BLURING ######
-            if blur:
-                im = im.cpu().numpy()
-
-                if len(im.shape) == 4:
-                    orgimg = np.squeeze(im.transpose(0, 2, 3, 1), axis= 0)
-                else:
-                    orgimg = im.transpose(1, 2, 0)
-                
-                orgimg = cv2.cvtColor(orgimg, cv2.COLOR_BGR2RGB)
-                img0 = copy.deepcopy(orgimg)
-                h0, w0 = im.shape[:2]  # orig hw
-                img_size = imgsz[0]
-                r = img_size / max(h0, w0)  # resize image to img_size
-                if r != 1:  # always resize down, only resize up if training with augmentation
-                    interp = cv2.INTER_AREA if r < 1  else cv2.INTER_LINEAR
-                    img0 = cv2.resize(img0, (int(w0 * r), int(h0 * r)), interpolation=interp)
-
-                # imgsz = check_img_size(img_size, s=model.stride.max())  # check img_size
-
-                img = letterbox(img0, new_shape=imgsz)[0]
-                # Convert from w,h,c to c,w,h
-                img = img.transpose(2, 0, 1).copy()
-
-                img = torch.from_numpy(img).to(device)
-                img = img.float()  # uint8 to fp16/32
-                img /= 255.0  # 0 - 255 to 0.0 - 1.0
-                if img.ndimension() == 3:
-                    img = img.unsqueeze(0)
-
-                # Inference
-                face_pred = face_model(img)[0]
-                
-                # Apply NMS
-                face_pred = non_max_suppression_face(face_pred, conf_thres, iou_thres)
-                print(len(face_pred[0]), 'face' if len(face_pred[0]) == 1 else 'faces')
-
-                # Process detections
-                for i, det in enumerate(face_pred):  # detections per image
-                    
-                    if webcam:  # batch_size >= 1
-                        p, im0, frame = path[i], im0s[i].copy(), dataset.count
-                    else:
-                        p, im0, frame = path, im0s.copy(), getattr(dataset, 'frame', 0)
-
-
-                    ##### FOR BLUR #########
-                    # blur_img 변수 생성, im0과 동일시
-                    blur_img = im0  
-                    ##### FOR BLUR #########
-
-                    p = Path(p)  # to Path
-                    save_path = str(Path(save_dir) / p.name)  # im.jpg
-
-                    if len(det):
-                        # Rescale boxes from img_size to im0 size
-                        det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
-
-                        # Print results
-                        for c in det[:, -1].unique():
-                            n = (det[:, -1] == c).sum()  # detections per class
-
-                        det[:, 5:15] = scale_coords_landmarks(img.shape[2:], det[:, 5:15], im0.shape).round()
-
-                        ### Write results
-                        for j in range(det.size()[0]):
-                            xyxy = det[j, :4].view(-1).tolist()
-                            conf = det[j, 4].cpu().numpy()
-                            landmarks = det[j, 5:15].view(-1).tolist()
-                            class_num = det[j, 15].cpu().numpy()
-
-
-                            
-                            im0 = show_results(im0, xyxy, conf, landmarks, class_num)
-
-                            ##################yk##################
-                            # print(f'\n xyxy = {xyxy}\n')
-
-
-
-                            # mosaic loc 변수 생성, mosaic loc= xyxy 1~3 index(y좌표), xyxy 0~2 index(x좌표)부분
-                            # mosaic loc 부분 blur = mosaic_loc
-                            mosaic_loc = blur_img[int(xyxy[1]):int(xyxy[3]), int(xyxy[0]):int(xyxy[2])]  
-                            mosaic_loc = cv2.blur(mosaic_loc, (50,50))
-                            
-                            # blur가 안된 blur_img를 새 변수 original_img와 동일시 
-                            # 원본 + blur 처리된 loc => 최종 이미지
-                            original_img = blur_img
-                            original_img[int(xyxy[1]):int(xyxy[3]), int(xyxy[0]):int(xyxy[2])] = mosaic_loc
-
-                            im0 = original_img
-
-                        #####################################
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            ###### FOR FACE BLURING ######
-
             if len(det):
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_boxes(im.shape[2:], det[:, :4], im0.shape).round()
@@ -471,22 +343,6 @@ def run(
                 
                 
                 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -635,10 +491,6 @@ def parse_opt():
     parser.add_argument('--save-MOT-label', default=True, action='store_true', help='save label MOT fomet')
     ###### FOR TRACKING ######
 
-    ##### For Face Bluring #####
-    parser.add_argument('--blur', default=True, action='store_true', help='hide confidences')
-    parser.add_argument('--bluring-result', default=ROOT / 'runs/face_blur')
-    ##### For Face Bluring #####
     
     
     opt = parser.parse_args()
