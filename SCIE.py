@@ -20,10 +20,6 @@ sys.path.append('.\\detector_tracker\\trackers')
 sys.path.append('.\\detector_tracker\\trackers\\strongsort')
 sys.path.append('.\\yolov5_face')
 
-print(sys.path)
-
-face_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print(face_device)
 
 
 from models.common import DetectMultiBackend
@@ -109,6 +105,7 @@ def run(
         hide_class=False,
         save_MOT_label=True,
         ###### FOR TRACKING ######
+        blur=False,
 
 
 
@@ -291,51 +288,65 @@ def run(
 
             ###### FOR TRACKING ######
                 if len(outputs[i]) > 0:
-                    for j, (output) in enumerate(outputs[i]):
+                    for j, (output) in enumerate(outputs[i]): 
                         
                         bbox = output[0:4]
                         id = output[4]
                         cls = output[5]
                         conf = output[6]
-                        # ###### FOR TRACKING HY ######
-                        if not os.path.isdir(str(save_track_dir)+'/'+f'ID{str(id).zfill(4)}'):
-                            id_dir = str(save_track_dir)+'/'+f'ID{str(id).zfill(4)}'
-                            os.makedirs(id_dir)
-                            id_dir_path = Path(id_dir)
-                            (id_dir_path / 'labels').mkdir(parents=True, exist_ok=True)
-                            (id_dir_path / 'images').mkdir(parents=True, exist_ok=True)
-                            (id_dir_path / 'results').mkdir(parents=True, exist_ok=True)
-                            (id_dir_path / 'crop').mkdir(parents=True, exist_ok=True)
-                        else:
-                            id_dir = str(save_track_dir)+'/'+f'ID{str(id).zfill(4)}'
-                            id_dir_path = Path(id_dir)
-                            
-                        # to MOT format label
-                        if save_MOT_label:
-                            bbox_left = output[0]
-                            bbox_top = output[1]
-                            bbox_w = output[2] - output[0]
-                            bbox_h = output[3] - output[1]
-                            # Write MOT compliant results to file
-                            with open(str(id_dir_path) + '/labels/' + 'mot.txt', 'a') as f:
-                                f.write(('%g ' * 10 + '\n') % (frame_idx + 1, id, bbox_left,  # MOT format
-                                                        bbox_top, bbox_w, bbox_h, -1, -1, -1, i))
-                            
-                        # to drone crop
-                        c = int(cls)  # integer class
-                        id = int(id)  # integer id
-                        label = None if hide_labels else (f'{id} {names[c]}' if hide_conf else \
-                                (f'{id} {conf:.2f}' if hide_class else f'{id} {names[c]} {conf:.2f}'))
-                        color = colors(c, True)
-                        annotator.box_label(bbox, label, color=color)
                         
-                        if save_crop:
-                            txt_file_name = txt_file_name if (isinstance(path, list) and len(path) > 1) else ''
-                            save_one_box(np.array(bbox, dtype=np.int16), imc, file=id_dir_path /'crop'/ txt_file_name / names[c] / f'{id}' / f'{p.stem}.jpg', BGR=True)
+                        # drone processing
                         
-                        #img save
-                        if save_img:
-                            cv2.imwrite(str(id_dir_path)+'/images/'+f'{frame_idx}.jpg', im0)
+                        if cls == 0:
+                            # ###### FOR TRACKING HY ######
+                            if not os.path.isdir(str(save_track_dir)+'/'+f'ID{str(id).zfill(4)}'):
+                                id_dir = str(save_track_dir)+'/'+f'ID{str(id).zfill(4)}'
+                                os.makedirs(id_dir)
+                                id_dir_path = Path(id_dir)
+                                (id_dir_path / 'labels').mkdir(parents=True, exist_ok=True)
+                                (id_dir_path / 'images').mkdir(parents=True, exist_ok=True)
+                                (id_dir_path / 'results').mkdir(parents=True, exist_ok=True)
+                                (id_dir_path / 'crop').mkdir(parents=True, exist_ok=True)
+                            else:
+                                id_dir = str(save_track_dir)+'/'+f'ID{str(id).zfill(4)}'
+                                id_dir_path = Path(id_dir)
+                                
+                            # to MOT format label
+                            if save_MOT_label:
+                                bbox_left = output[0]
+                                bbox_top = output[1]
+                                bbox_w = output[2] - output[0]
+                                bbox_h = output[3] - output[1]
+                                # Write MOT compliant results to file
+                                with open(str(id_dir_path) + '/labels/' + 'mot.txt', 'a') as f:
+                                    f.write(('%g ' * 10 + '\n') % (frame_idx + 1, id, bbox_left,  # MOT format
+                                                            bbox_top, bbox_w, bbox_h, -1, -1, -1, i))
+                                
+                            # to drone crop
+                            c = int(cls)  # integer class
+                            id = int(id)  # integer id
+                            label = None if hide_labels else (f'{id} {names[c]}' if hide_conf else \
+                                    (f'{id} {conf:.2f}' if hide_class else f'{id} {names[c]} {conf:.2f}'))
+                            color = colors(c, True)
+                            annotator.box_label(bbox, label, color=color)
+                            
+                            if save_crop:
+                                txt_file_name = txt_file_name if (isinstance(path, list) and len(path) > 1) else ''
+                                save_one_box(np.array(bbox, dtype=np.int16), imc, file=id_dir_path /'crop'/ txt_file_name / names[c] / f'{id}' / f'{p.stem}.jpg', BGR=True)
+                            
+                            #img save
+                            if save_img:
+                                cv2.imwrite(str(id_dir_path)+'/images/'+f'{frame_idx}.jpg', im0)
+                                
+                                
+                        # face processing
+                        if blur:
+                            if cls == 1:
+                                pass
+                                
+                                
+                        if cls == 2:
+                            pass
             else:
                 pass
                 #tracker_list[i].tracker.pred_n_update_all_tracks()
@@ -490,7 +501,9 @@ def parse_opt():
     parser.add_argument('--hide-class', default=False, action='store_true', help='hide IDs')
     parser.add_argument('--save-MOT-label', default=True, action='store_true', help='save label MOT fomet')
     ###### FOR TRACKING ######
-
+    
+    
+    parser.add_argument('--blur', default=False, action='store_true', help='save label MOT fomet')
     
     
     opt = parser.parse_args()
