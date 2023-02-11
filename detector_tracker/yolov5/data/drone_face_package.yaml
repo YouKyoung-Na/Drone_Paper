@@ -16,3 +16,5 @@ test:  # test images (optional)
 # Classes
 names:
   0: drone
+  1: face
+  2: package
