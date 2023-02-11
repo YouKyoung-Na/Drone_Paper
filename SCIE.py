@@ -295,8 +295,24 @@ def run(
                         cls = output[5]
                         conf = output[6]
                         
-                        # drone processing
                         
+                        # face processing
+                        if blur:
+                            blur_img = im0  
+                            if cls == 1:
+                                mosaic_loc = blur_img[int(bbox[1]):int(bbox[3]), int(bbox[0]):int(bbox[2])]  
+                                mosaic_loc = cv2.blur(mosaic_loc, (50,50))
+                            
+                                # blur가 안된 blur_img를 새 변수 original_img와 동일시 
+                                # 원본 + blur 처리된 loc => 최종 이미지
+                                original_img = blur_img
+                                original_img[int(bbox[1]):int(bbox[3]), int(bbox[0]):int(bbox[2])] = mosaic_loc
+
+                                im0 = original_img
+                        
+                        
+                        
+                        # drone processing
                         if cls == 0:
                             # ###### FOR TRACKING HY ######
                             if not os.path.isdir(str(save_track_dir)+'/'+f'ID{str(id).zfill(4)}'):
@@ -311,7 +327,12 @@ def run(
                                 id_dir = str(save_track_dir)+'/'+f'ID{str(id).zfill(4)}'
                                 id_dir_path = Path(id_dir)
                                 
-                            # to MOT format label
+                            yoloform = str(int(cls)) +' '+ str((bbox[0] + (output[2] - output[0])/2)/640) +' '+ str((bbox[1] + (output[3] - output[1])/2)/480) +' '+ str((output[2] - output[0])/640) +' '+ str((output[3] - output[1])/480) 
+                            #yolo format에 맞춰서 결과 저장하도록 만듬
+                            with open(str(id_dir_path) + '/labels/' + 'yolo.txt', 'a') as f:
+                                    f.write(yoloform + '\n')
+
+                            # to MOT format label # MOT FORMAT으로도 나중에 성능 평가 등에 사용할 수도 있어서 남겨뒀습니다.
                             if save_MOT_label:
                                 bbox_left = output[0]
                                 bbox_top = output[1]
@@ -339,12 +360,8 @@ def run(
                                 cv2.imwrite(str(id_dir_path)+'/images/'+f'{frame_idx}.jpg', im0)
                                 
                                 
-                        # face processing
-                        if blur:
-                            if cls == 1:
-                                pass
-                                
-                                
+
+                        # package
                         if cls == 2:
                             pass
             else:
