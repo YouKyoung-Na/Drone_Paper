@@ -20,6 +20,10 @@ from utilss.general import check_img_size, non_max_suppression_face, apply_class
 from utilss.plots import plot_one_box
 from utilss.torch_utils import select_device, load_classifier, time_synchronized
 
+##시간 측정##
+import time
+
+
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
@@ -82,6 +86,12 @@ def show_results(img, xyxy, conf, landmarks, class_num):
 
 
 def detect(model, source, device, project, name, exist_ok, save_img, view_img):
+
+    ## 시간 측정
+    tm = cv2.TickMeter()
+
+    tm.start()
+
     # Load model
 
     img_size = 640
@@ -228,14 +238,14 @@ def detect(model, source, device, project, name, exist_ok, save_img, view_img):
                     except Exception as e:
                         print(e)
 
-                    
-            
+    tm.stop()
+    print(f'시간 측정 : {tm.getTimeMilli}')  #ms로 시간 측정
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--weights', nargs='+', type=str, default='yolov5s-face.pt', help='model.pt path(s)')
+    parser.add_argument('--weights', nargs='+', type=str, default='best.pt', help='model.pt path(s)')
     parser.add_argument('--source', type=str, default='./data/images/our.jpg', help='source')  # file/folder, 0 for webcam
     # parser.add_argument('--img-size',nargs= '+',type=int, default=640, help='inference size (pixels)')    #img size 값 조정 option 없앰
     parser.add_argument('--img-size',type=int, default=640, help='inference size (pixels)')

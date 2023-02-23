@@ -7,6 +7,10 @@ from pathlib import Path
 import copy
 import torch
 
+## time estimate
+import cv2
+
+
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
 if str(ROOT) not in sys.path:
@@ -67,7 +71,7 @@ import logging
 ### Main
 @smart_inference_mode()
 def run(
-        weights=ROOT / 'yolov5s.pt',  # model path or triton URL
+        weights=ROOT / 'best.pt',  # model path or triton URL
         source=ROOT / 'detector_tracker/data/images',  # file/dir/URL/glob/screen/0(webcam)
         data=ROOT / 'detector_tracker/data/coco128.yaml',  # dataset.yaml path
         imgsz=(640, 640),  # inference size (height, width)
@@ -110,6 +114,15 @@ def run(
 
 
 ):
+    
+    # tm = cv2.TickMeter()
+    # tm.start()
+
+    # det after time
+    ##### 속도 측정 #####
+    time = 0
+    cnt = 0
+
     source = str(source)
     save_img = not nosave and not source.endswith('.txt')  # save inference images
     is_file = Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
@@ -178,13 +191,6 @@ def run(
     outputs = [None] * nr_sources
 ###### FOR TRACKING ######
 
-
-
-
-
-
-    
-
     # Run inference
     model.warmup(imgsz=(1 if pt or model.triton else bs, 3, *imgsz))  # warmup
     seen, windows, dt = 0, [], (Profile(), Profile(), Profile(), Profile())
@@ -243,7 +249,7 @@ def run(
                 ###### FOR TRACKING ######
                 
             p = Path(p)  # to Path
- 
+
 			# Store information about the current time
             now = datetime.now()
             now = str(now).replace(" ", "_")
@@ -371,10 +377,6 @@ def run(
                 
                 
                 
-
-
-
-
                 # Print results
                 for c in det[:, 5].unique():
                     n = (det[:, 5] == c).sum()  # detections per class
@@ -445,6 +447,12 @@ def run(
 
 # Print total time (preprocessing + inference + NMS + tracking)
         LOGGER.info(f"{s}{'' if len(det) else '(no detections), '}{sum([dt.dt for dt in dt if hasattr(dt, 'dt')]) * 1E3:.1f}ms")
+
+        ###############################
+        time += sum([dt.dt for dt in dt if hasattr(dt, 'dt')]) * 1E3
+        cnt += 1
+        ###############################
+
 ###### FOR TRACKING ######
     # Print results
     t = tuple(x.t / seen * 1E3 for x in dt)  # speeds per image
@@ -475,7 +483,10 @@ def run(
 
     ############### For Face Bluring ##################
 
+    # tm.stop()
+    # print(f'속도 측정(ms) : {tm.getTimeMilli}')
 
+    return (time, cnt)
 
 
 
@@ -530,11 +541,41 @@ def parse_opt():
 
 
 def main(opt):
+    # tm1 = time.time()
     check_requirements(exclude=('tensorboard', 'thop'))
-    run(**vars(opt))
+    tm, cnt = run(**vars(opt))
+    return tm, cnt
+    # tm2 = time.time()
 
+
+
+## yk - 시간측정 ##
+# acc = 0
 
 if __name__ == "__main__":
-    opt = parse_opt()
-    main(opt)
+    # tm1 = time.time()
+    # opt = parse_opt()
+    # tm2 = time.time()
 
+    # for i in range(100):
+    #     opt = parse_opt()
+    #     acc += main(opt)
+
+    # for i in range(100):
+    #     tm1 = time.time()
+    #     opt = parse_opt()
+    #     main(opt)
+    #     tm2 = time.time()
+    #     acc += (tm2-tm1)
+
+    # main(opt)
+
+    opt = parse_opt()
+    tm, cnt = main(opt)
+    
+    # acc = acc + tm
+
+    # print(f'\n cnt = {cnt}\n')
+    # print(f'\n tm = {tm} \n')
+    print(f'\n 속도 측정(ms) : {tm / cnt} \n')
+    # print(f'\n\n 평균 속도 측정(ms) : {acc/100} \n\n')
