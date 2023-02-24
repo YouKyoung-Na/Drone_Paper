@@ -7,7 +7,7 @@ from pathlib import Path
 import copy
 import torch
 
-## time estimate
+## for time checking 
 import cv2
 
 
@@ -165,11 +165,6 @@ def run(
         ###### FOR TRACKING ######
         nr_sources = len(dataset)
         ###### FOR TRACKING ######
-
-
-
-
-
 
     elif screenshot:
         dataset = LoadScreenshots(source, img_size=imgsz, stride=stride, auto=pt)
@@ -376,14 +371,11 @@ def run(
                 ###### FOR TRACKING ######
                 
                 
-                
                 # Print results
                 for c in det[:, 5].unique():
                     n = (det[:, 5] == c).sum()  # detections per class
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
-
-                
 
                 # Write results
                 for *xyxy, conf, cls in reversed(det):
@@ -448,10 +440,10 @@ def run(
 # Print total time (preprocessing + inference + NMS + tracking)
         LOGGER.info(f"{s}{'' if len(det) else '(no detections), '}{sum([dt.dt for dt in dt if hasattr(dt, 'dt')]) * 1E3:.1f}ms")
 
-        ###############################
+        ############## yk for time checking #################
         time += sum([dt.dt for dt in dt if hasattr(dt, 'dt')]) * 1E3
         cnt += 1
-        ###############################
+        ############## yk for time checking #################
 
 ###### FOR TRACKING ######
     # Print results
@@ -537,6 +529,8 @@ def parse_opt():
     opt = parser.parse_args()
     opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
     print_args(vars(opt))
+
+
     return opt
 
 
