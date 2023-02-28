@@ -16,6 +16,15 @@ ROOT = FILE.parents[0]  # YOLOv5 root directory
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))  # add ROOT to PATH
 ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
+print()
+print()
+print()
+print()
+print(ROOT)
+print()
+print()
+print()
+
 str_ROOT = str(ROOT)
 
 sys.path.append('.\\detector_tracker')
@@ -571,5 +580,6 @@ if __name__ == "__main__":
 
     # print(f'\n cnt = {cnt}\n')
     # print(f'\n tm = {tm} \n')
-    print(f'\n 속도 측정(ms) : {tm / cnt} \n')
+    print(f'\n 속도 측정(ms) : {tm / cnt:.3f} \n')
     # print(f'\n\n 평균 속도 측정(ms) : {acc/100} \n\n')
+    ## yk - 시간측정 ##
