@@ -16,14 +16,9 @@ ROOT = FILE.parents[0]  # YOLOv5 root directory
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))  # add ROOT to PATH
 ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
-print()
-print()
-print()
-print()
-print(ROOT)
-print()
-print()
-print()
+
+
+
 
 str_ROOT = str(ROOT)
 
@@ -31,7 +26,7 @@ sys.path.append('.\\detector_tracker')
 sys.path.append('.\\detector_tracker\\yolov5')
 sys.path.append('.\\detector_tracker\\trackers')
 sys.path.append('.\\detector_tracker\\trackers\\strongsort')
-sys.path.append('.\\yolov5_face')
+
 
 
 
@@ -225,7 +220,7 @@ def run(
         # Process predictions
         for i, det in enumerate(pred):  # per image, # NMS들어갔다가 나온 Detection 결과 하나하나마다 반복적용
 
-
+            print(f'Tracking 이전 :{det}\n')
             seen += 1
             if webcam:  # batch_size >= 1
                 p, im0, frame = path[i], im0s[i].copy(), dataset.count
@@ -292,7 +287,7 @@ def run(
             if len(det):
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_boxes(im.shape[2:], det[:, :4], im0.shape).round()
-                print(f'output = {outputs}')
+                print(f'Tracking 이후 :{outputs}\n')
 
 
 
@@ -305,20 +300,6 @@ def run(
                         cls = output[5]
                         conf = output[6]
                         
-                        
-                        # face processing
-                        if blur:
-                            blur_img = im0  
-                            if cls == 1:
-                                mosaic_loc = blur_img[int(bbox[1]):int(bbox[3]), int(bbox[0]):int(bbox[2])]  
-                                mosaic_loc = cv2.blur(mosaic_loc, (50,50))
-                            
-                                # blur가 안된 blur_img를 새 변수 original_img와 동일시 
-                                # 원본 + blur 처리된 loc => 최종 이미지
-                                original_img = blur_img
-                                original_img[int(bbox[1]):int(bbox[3]), int(bbox[0]):int(bbox[2])] = mosaic_loc
-
-                                im0 = original_img
                         
                         
                         
@@ -368,12 +349,6 @@ def run(
                             #img save
                             if save_img:
                                 cv2.imwrite(str(id_dir_path)+'/images/'+f'{frame_idx}.jpg', im0)
-                                
-                                
-
-                        # package
-                        if cls == 2:
-                            pass
             else:
                 pass
                 #tracker_list[i].tracker.pred_n_update_all_tracks()
@@ -531,8 +506,7 @@ def parse_opt():
     parser.add_argument('--save-MOT-label', default=True, action='store_true', help='save label MOT fomet')
     ###### FOR TRACKING ######
     
-    
-    parser.add_argument('--blur', default=False, action='store_true', help='save label MOT fomet')
+
     
     
     opt = parser.parse_args()
