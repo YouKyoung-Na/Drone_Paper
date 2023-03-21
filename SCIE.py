@@ -1,4 +1,3 @@
-### yolov5 default module
 import argparse
 import os
 import platform
@@ -21,7 +20,6 @@ ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
 
 str_ROOT = str(ROOT)
-
 sys.path.append('.\\detector_tracker')
 sys.path.append('.\\detector_tracker\\yolov5')
 sys.path.append('.\\detector_tracker\\trackers')
@@ -57,21 +55,22 @@ import time
 import logging
 
 # 서빈표 module
-# from methods.calibration import calib
-# from methods.identify import legal
-# from methods.dimension import visualization, rotation, direction
-
+from methods.dimension import Dimension
 
 ### Sub Thread execution
-# def work(token_folder, save_dir):
-# 	print("THREAD...")
+def work(yoloform, class_number, img, crop):
+	# parameter setting
+	D = Dimension(yoloform, class_number, img, crop)
 	
-# 	# visualizing(line)
-# 	draw(token_folder, save_dir)
+	# find rotation information
+	left_comma, cc_xy = D.rotation()
 	
-	# 
-
-
+	# calculate detph information
+	z_info, left_c, right_c = D.depth(left_comma, cc_xy, class_number)
+	return z_info, left_c, right_c
+	# object visualization using depth information
+#	D.visualization(z_info, left_c, right_c)
+    
 ### Main
 @smart_inference_mode()
 def run(
@@ -118,11 +117,7 @@ def run(
 
 
 ):
-    
-    # tm = cv2.TickMeter()
-    # tm.start()
 
-    # det after time
     ##### 속도 측정 #####
     time = 0
     cnt = 0
@@ -136,20 +131,12 @@ def run(
     if is_url and is_file:
         source = check_file(source)  # download
 
-    # Directories
-    save_dir = increment_path(Path(project) / name, exist_ok=exist_ok)  # increment run
-    
+
     ###### FOR TRACKING ######
     save_track_dir = increment_path(Path(tracking_result) / name, exist_ok=exist_ok)  # increment run
     ###### FOR TRACKING ######
 
-    
-    (save_dir / 'labels').mkdir(parents=True, exist_ok=True)
-    (save_dir / 'images').mkdir(parents=True, exist_ok=True)
-    
-    # Result directory
-    if not os.path.isdir(str(save_dir)+'/'+'results'):
-        os.makedirs(str(save_dir)+'/'+'results')
+
 
     # Load model
     device = select_device(device)
@@ -207,7 +194,7 @@ def run(
 
         # Inference
         with dt[1]:
-            visualize = increment_path(save_dir / Path(path).stem, mkdir=True) if visualize else False
+            visualize = increment_path(save_track_dir / Path(path).stem, mkdir=True) if visualize else False
             pred = model(im, augment=augment, visualize=visualize)
 
         # NMS
@@ -220,7 +207,6 @@ def run(
         # Process predictions
         for i, det in enumerate(pred):  # per image, # NMS들어갔다가 나온 Detection 결과 하나하나마다 반복적용
 
-            print(f'Tracking 이전 :{det}\n')
             seen += 1
             if webcam:  # batch_size >= 1
                 p, im0, frame = path[i], im0s[i].copy(), dataset.count
@@ -229,7 +215,7 @@ def run(
                 p = Path(p)
                 s += f'{i}: '
                 txt_file_name = p.name
-                save_path = str(save_dir / p.name)  # im.jpg, vid.mp4, ...
+                
                 ###### FOR TRACKING ######
                 
             else:
@@ -240,35 +226,28 @@ def run(
                 # video file
                 if source.endswith(VID_FORMATS):
                     txt_file_name = p.stem
-                    save_path = str(save_dir / p.name)  # im.jpg, vid.mp4, ...
+                    
                 # folder with imgs
                 else:
                     txt_file_name = p.parent.name  # get folder name containing current img
-                    save_path = str(save_dir / p.parent.name)  # im.jpg, vid.mp4, ...
+                    
                 ###### FOR TRACKING ######
                 
             p = Path(p)  # to Path
 
-			# Store information about the current time
-            now = datetime.now()
-            now = str(now).replace(" ", "_")
-            now = now[:19]
-            
+
+
             ###### FOR TRACKING ######
             curr_frames[i] = im0
             ###### FOR TRACKING ######
             
             # Save path and file name with current time
-            save_path = str(save_dir / 'images' /'img') + f'_{frame}' + '.jpg'
-            txt_path = str(save_dir / 'labels' / 'label') + ('' if dataset.mode == 'image' else f'_{frame}')  # im.txt
+
             # Drone and Package detection -> False to True
-            save_drone = True
-            save_package = False
             
             s += '%gx%g ' % im.shape[2:]  # print string
             gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
             imc = im0.copy() if save_crop else im0  # for save_crop
-            
             annotator = Annotator(im0, line_width=line_thickness, example=str(names))
             
             ###### FOR TRACKING ######
@@ -287,7 +266,6 @@ def run(
             if len(det):
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_boxes(im.shape[2:], det[:, :4], im0.shape).round()
-                print(f'Tracking 이후 :{outputs}\n')
 
 
 
@@ -303,77 +281,64 @@ def run(
                         
                         
                         
-                        # drone processing
-                        if cls == 0:
-                            # ###### FOR TRACKING HY ######
-                            if not os.path.isdir(str(save_track_dir)+'/'+f'ID{str(id).zfill(4)}'):
-                                id_dir = str(save_track_dir)+'/'+f'ID{str(id).zfill(4)}'
-                                os.makedirs(id_dir)
-                                id_dir_path = Path(id_dir)
-                                (id_dir_path / 'labels').mkdir(parents=True, exist_ok=True)
-                                (id_dir_path / 'images').mkdir(parents=True, exist_ok=True)
-                                (id_dir_path / 'results').mkdir(parents=True, exist_ok=True)
-                                (id_dir_path / 'crop').mkdir(parents=True, exist_ok=True)
-                            else:
-                                id_dir = str(save_track_dir)+'/'+f'ID{str(id).zfill(4)}'
-                                id_dir_path = Path(id_dir)
-                                
-                            yoloform = str(int(cls)) +' '+ str((bbox[0] + (output[2] - output[0])/2)/640) +' '+ str((bbox[1] + (output[3] - output[1])/2)/480) +' '+ str((output[2] - output[0])/640) +' '+ str((output[3] - output[1])/480) 
-                            #yolo format에 맞춰서 결과 저장하도록 만듬
-                            with open(str(id_dir_path) + '/labels/' + 'yolo.txt', 'a') as f:
-                                    f.write(yoloform + '\n')
 
-                            # to MOT format label # MOT FORMAT으로도 나중에 성능 평가 등에 사용할 수도 있어서 남겨뒀습니다.
-                            if save_MOT_label:
-                                bbox_left = output[0]
-                                bbox_top = output[1]
-                                bbox_w = output[2] - output[0]
-                                bbox_h = output[3] - output[1]
-                                # Write MOT compliant results to file
-                                with open(str(id_dir_path) + '/labels/' + 'mot.txt', 'a') as f:
-                                    f.write(('%g ' * 10 + '\n') % (frame_idx + 1, id, bbox_left,  # MOT format
-                                                            bbox_top, bbox_w, bbox_h, -1, -1, -1, i))
-                                
-                            # to drone crop
-                            c = int(cls)  # integer class
-                            id = int(id)  # integer id
-                            label = None if hide_labels else (f'{id} {names[c]}' if hide_conf else \
-                                    (f'{id} {conf:.2f}' if hide_class else f'{id} {names[c]} {conf:.2f}'))
-                            color = colors(c, True)
-                            annotator.box_label(bbox, label, color=color)
+
+                        # ###### FOR TRACKING HY ######
+                        if not os.path.isdir(str(save_track_dir)+'/'+f'ID{str(id).zfill(4)}'):
+                            id_dir = str(save_track_dir)+'/'+f'ID{str(id).zfill(4)}'
+                            os.makedirs(id_dir)
+                            id_dir_path = Path(id_dir)
+                            (id_dir_path / 'labels').mkdir(parents=True, exist_ok=True)
+                            (id_dir_path / 'images').mkdir(parents=True, exist_ok=True)
+                            (id_dir_path / 'results').mkdir(parents=True, exist_ok=True)
+                            (id_dir_path / 'crop').mkdir(parents=True, exist_ok=True)
+                        else:
+                            id_dir = str(save_track_dir)+'/'+f'ID{str(id).zfill(4)}'
+                            id_dir_path = Path(id_dir)
                             
-                            if save_crop:
-                                txt_file_name = txt_file_name if (isinstance(path, list) and len(path) > 1) else ''
-                                save_one_box(np.array(bbox, dtype=np.int16), imc, file=id_dir_path /'crop'/ txt_file_name / names[c] / f'{id}' / f'{p.stem}.jpg', BGR=True)
-                            
-                            #img save
-                            if save_img:
-                                cv2.imwrite(str(id_dir_path)+'/images/'+f'{frame_idx}.jpg', im0)
+                        yoloform = str(int(cls)) +' '+ str((bbox[0] + (output[2] - output[0])/2)/640) +' '+ str((bbox[1] + (output[3] - output[1])/2)/480) +' '+ str((output[2] - output[0])/640) +' '+ str((output[3] - output[1])/480)
+                        yoloform_additional = yoloform + ' ' + str(id) + ' ' +str(frame_idx)
+                        #yolo format에 맞춰서 결과 저장하도록 만듬
+                        with open(str(id_dir_path) + '/labels/' + 'yolo.txt', 'a') as f:
+                                f.write(yoloform_additional + '\n')
+
+
+
+
+
+                        
+                        # to drone crop
+                        c = int(cls)  # integer class
+                        id = int(id)  # integer id
+                        label = None if hide_labels else (f'{id} {names[c]}' if hide_conf else \
+                                (f'{id} {conf:.2f}' if hide_class else f'{id} {names[c]} {conf:.2f}'))
+                        color = colors(c, True)
+                        annotator.box_label(bbox, label, color=color)
+                        
+                        
+                        if save_crop:
+                            txt_file_name = txt_file_name if (isinstance(path, list) and len(path) > 1) else ''
+                            crop=save_one_box(np.array(bbox, dtype=np.int16), imc, file=id_dir_path /'crop'/ txt_file_name / names[c] / f'{id}' / f'{p.stem}.jpg', BGR=True)
+                        
+                    
+                        
+                        
+                        z_info, left_c, right_c = work(yoloform, cls, im0, crop)
+                        save_res_form = str(z_info) + ' ' + str(left_c[0]) + ' ' + str(left_c[1])+ ' ' + str(left_c[2])+ ' ' + str(right_c[0])+ ' ' + str(right_c[1])+ ' ' + str(right_c[2])
+                        
+                        
+                        #img save
+                        if save_img:
+                            cv2.imwrite(str(id_dir_path)+'/images/'+f'{frame_idx}.jpg', im0)
+                        with open(str(id_dir_path) + '/results/' + 'result.txt', 'a') as f:
+                                f.write(save_res_form + '\n')
+                        
             else:
                 pass
-                #tracker_list[i].tracker.pred_n_update_all_tracks()
-                ###### FOR TRACKING ######
-                
-                
-                # Print results
-                for c in det[:, 5].unique():
-                    n = (det[:, 5] == c).sum()  # detections per class
-                    s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
-
-                # Write results
-                for *xyxy, conf, cls in reversed(det):
-#                    if save_txt:  # Write to file
-                    if cls == 0: # drone
-                        save_drone = True
-                        xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                        line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
-                        with open(f'{txt_path}.txt', 'a') as f:
-                            f.write(('%g ' * len(line)).rstrip() % line + '\n')
                         
                         
-
-
+                        
                         # token_folder = natsort.natsorted(os.listdir("./"+str(save_dir)+"/labels/"))
 						
                         # if (len(token_folder) > 91): # 30 frame = 3s
@@ -433,34 +398,10 @@ def run(
     # Print results
     t = tuple(x.t / seen * 1E3 for x in dt)  # speeds per image
     # LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {(1, 3, *imgsz)}' % t)
-    if save_txt or save_img:
-        s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt else ''
-        LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}{s}")
+
     if update:
         strip_optimizer(weights[0])  # update model (to fix SourceChangeWarning)
 
-
-
-    # print(f'\n xyxy = {xyxy}\n')
-
-    # # blur option이 True일 때 실행
-    # if opt.blur: 
-    #     # mosaic loc 변수 생성, mosaic loc= xyxy 1~3 index(y좌표), xyxy 0~2 index(x좌표)부분
-    #     # mosaic loc 부분 blur = mosaic_loc
-    #     mosaic_loc = blur_img[int(xyxy[1]):int(xyxy[3]), int(xyxy[0]):int(xyxy[2])]  
-    #     mosaic_loc = cv2.blur(mosaic_loc, (50,50))
-        
-    #     # blur가 안된 blur_img를 새 변수 original_img와 동일시 
-    #     # 원본 + blur 처리된 loc => 최종 이미지
-    #     original_img = blur_img
-    #     original_img[int(xyxy[1]):int(xyxy[3]), int(xyxy[0]):int(xyxy[2])] = mosaic_loc
-
-    #     im0 = original_img
-
-    ############### For Face Bluring ##################
-
-    # tm.stop()
-    # print(f'속도 측정(ms) : {tm.getTimeMilli}')
 
     return (time, cnt)
 
@@ -469,8 +410,8 @@ def run(
 def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'weights/best.pt', help='model path or triton URL')
-    parser.add_argument('--source', type=str, default=ROOT / 'data/images', help='file/dir/URL/glob/screen/0(webcam)')
-    parser.add_argument('--data', type=str, default=ROOT / 'data/onlydrone.yaml', help='(optional) dataset.yaml path')
+    parser.add_argument('--source', type=str, default=0, help='file/dir/URL/glob/screen/0(webcam)')
+    parser.add_argument('--data', type=str, default=ROOT / 'data/DJI_DRONE.yaml', help='(optional) dataset.yaml path')
     parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[640], help='inference size h,w')
     parser.add_argument('--conf-thres', type=float, default=0.8, help='confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='NMS IoU threshold')
@@ -518,42 +459,20 @@ def parse_opt():
 
 
 def main(opt):
-    # tm1 = time.time()
+
     check_requirements(exclude=('tensorboard', 'thop'))
     tm, cnt = run(**vars(opt))
     return tm, cnt
-    # tm2 = time.time()
 
 
 
 ## yk - 시간측정 ##
-# acc = 0
+
 
 if __name__ == "__main__":
-    # tm1 = time.time()
-    # opt = parse_opt()
-    # tm2 = time.time()
 
-    # for i in range(100):
-    #     opt = parse_opt()
-    #     acc += main(opt)
-
-    # for i in range(100):
-    #     tm1 = time.time()
-    #     opt = parse_opt()
-    #     main(opt)
-    #     tm2 = time.time()
-    #     acc += (tm2-tm1)
-
-    # main(opt)
 
     opt = parse_opt()
     tm, cnt = main(opt)
-    
-    # acc = acc + tm
-
-    # print(f'\n cnt = {cnt}\n')
-    # print(f'\n tm = {tm} \n')
     print(f'\n 속도 측정(ms) : {tm / cnt:.3f} \n')
-    # print(f'\n\n 평균 속도 측정(ms) : {acc/100} \n\n')
     ## yk - 시간측정 ##
