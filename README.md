@@ -30,8 +30,10 @@ cd detector_tracker
 pip install -r requirements.txt
 pip install natsort
 conda install -c conda-forge lap
+pip install rembg[gpu]
 ```
-conda install -c conda-forge lap
+
+
 ### pt file Download (detector_Tracker yolov5X size weight, 나중에 변경) ###
 ```python
 https://www.notion.so/0406694cfafb4181be35fb49e8782abc#422455d8d2a44e9a9ea5a057df1ee363
