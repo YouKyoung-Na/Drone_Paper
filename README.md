@@ -31,7 +31,11 @@ pip install -r requirements.txt
 pip install natsort
 conda install -c conda-forge lap
 pip install rembg[gpu]
+cd ..
 ```
+
+
+### weights 이름의 dir 생성 후 아래 pt file 집어넣기 ###
 
 
 ### pt file Download (detector_Tracker yolov5X size weight, 나중에 변경) ###
