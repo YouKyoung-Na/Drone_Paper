@@ -3,6 +3,7 @@
 
 
 ## ENV SETTING ##
+	Windows 11
 	Intel i7 11th, 12th
 	Nvidia RTX3060 ,RTX3070, RTX3070ti
 	python 3.8
@@ -16,6 +17,7 @@
 git clone https://github.com/YouKyoung-Na/Drone_Paper.git
 ```
 
+## Windows ENV Setting ##
 ### Anaconda ENV Setting ###
 ```bash
 conda create -n 'Drone_Project' python=3.8
